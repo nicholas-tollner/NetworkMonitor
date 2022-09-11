@@ -9,8 +9,9 @@
 NetworkMonitor::NetworkMonitor(QWidget *parent): QWidget(parent)
 {
     // Setup PortScanner
-    PortScanner ps;
-    ps.init();
+    PortScanner ps("127.0.0.1");          // Localhost 
+    ps.init(54321);                       // Port number to check
+    ps.scan(54321, "Ping");
     
     // Setup GUI
     ui.setupUi(this);

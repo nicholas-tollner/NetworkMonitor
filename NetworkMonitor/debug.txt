@@ -1,3 +1,4 @@
  === Application Started === 
  WSAStartup ... Success: 0
 Getaddrinfo ... Success: 0
+Pinging 127.0.0.1:54321 ... Success!

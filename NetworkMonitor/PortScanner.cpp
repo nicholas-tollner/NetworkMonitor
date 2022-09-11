@@ -7,8 +7,10 @@
 */
 
 // Constructor
-PortScanner::PortScanner()
+PortScanner::PortScanner(const char* ip)
 {
+    this->ip = ip;
+
     outfile.open("debug.txt");
     outfile << " === Application Started === " << endl;
 }
@@ -19,7 +21,7 @@ PortScanner::~PortScanner()
     outfile.close();
 }
 
-int PortScanner::init()
+int PortScanner::init(int portNumber)
 {
     outfile << " WSAStartup ... ";
 
@@ -41,7 +43,7 @@ int PortScanner::init()
 
     outfile << "Getaddrinfo ... ";
     // Request IP address of server from command line
-    iResult = getaddrinfo(ip, "255", &hints, &result);      // Pass 255 as port number for base case
+    iResult = getaddrinfo(ip, std::to_string(portNumber).c_str(), &hints, &result);
     if (iResult != 0) {
         outfile << "Fail: " << iResult << endl;
         WSACleanup();
@@ -50,7 +52,59 @@ int PortScanner::init()
     outfile << "Success: " << iResult << endl;
 }
 
-void PortScanner::scan()
+int PortScanner::scan(int portNumber, string message)
 {
+    // Point to result addrinfo struct
+    ptr = result;
 
+    // Setup socket to use for connection to server
+    connectSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+
+    outfile << "Pinging " << ip << ":" << portNumber << " ... ";
+
+    // Check connectSocket is now setup correctly
+    if (connectSocket == INVALID_SOCKET) {
+        outfile << "Error: " << WSAGetLastError() << endl;
+        freeaddrinfo(result);
+        WSACleanup();
+        return 1;
+    }
+
+    // Attempt connection
+    iResult = connect(connectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
+
+    // Check if connection was successful
+    if (iResult == SOCKET_ERROR) {
+        closesocket(connectSocket);
+        connectSocket = INVALID_SOCKET;
+    }
+
+    freeaddrinfo(result);
+
+    // Check if connection failed
+    if (connectSocket == INVALID_SOCKET) {
+        outfile << "Error: Unable to connect!" << endl;
+        WSACleanup();
+        return 1;
+    }
+    outfile << "Success!" << endl;
+
+    // Sending data
+    // Truncate message length to DEFAULT_BUFLEN
+    if (message.length() > DEFAULT_BUFLEN) {
+        message = message.substr(0, DEFAULT_BUFLEN);
+    }
+    sendbuf = message.data();
+
+    // Send input to server
+    iResult = send(connectSocket, sendbuf, (int)strlen(sendbuf), 0);
+    if (iResult == SOCKET_ERROR) {
+        printf("send failed: %d\n", WSAGetLastError());
+        closesocket(connectSocket);
+        WSACleanup();
+        return 1;
+    }
+
+
+    return 0;
 }
