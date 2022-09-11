@@ -1,9 +1,16 @@
-#include "NetworkMonitor.h"
+#include <winsock2.h>
 
-NetworkMonitor::NetworkMonitor(QWidget *parent)
-    : QWidget(parent)
+#include "NetworkMonitor.h"
+#include "PortScanner.h"
+
+NetworkMonitor::NetworkMonitor(QWidget *parent) : QWidget(parent)
 {
     ui.setupUi(this);
+
+    {
+        PortScanner ps;
+    }
+
 }
 
 NetworkMonitor::~NetworkMonitor()
