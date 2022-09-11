@@ -1,10 +1,14 @@
 #include "NetworkMonitor.h"
 #include <QtWidgets/QApplication>
 
+#pragma comment(lib,"WS2_32")       // Provide external symbols to linker
+
 int main(int argc, char *argv[])
 {
-    QApplication a(argc, argv);
-    NetworkMonitor w;
-    w.show();
-    return a.exec();
+    QApplication app(argc, argv);
+    NetworkMonitor widget;
+
+    widget.show();
+
+    return app.exec();
 }

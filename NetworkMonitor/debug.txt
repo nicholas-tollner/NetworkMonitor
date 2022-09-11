@@ -1,0 +1,3 @@
+ === Application Started === 
+ WSAStartup ... Success: 0
+Getaddrinfo ... Success: 0
