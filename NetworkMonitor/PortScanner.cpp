@@ -1,5 +1,6 @@
 #include "PortScanner.h"
 
+#define SKIP 3
 
 /* Need to create multiple threads
 	Each thread must attempt to connect to a port number
@@ -12,6 +13,7 @@ PortScanner::PortScanner(const char* ip)
     this->ip = ip;
 
     outfile.open("debug.txt");
+
     outfile << " === Application Started === " << endl;
 }
 
@@ -19,6 +21,22 @@ PortScanner::PortScanner(const char* ip)
 PortScanner::~PortScanner()
 {
     outfile.close();
+    outfile.open("output.txt", ios_base::app);          // Append mode
+    infile.open("debug.txt");
+
+
+    for (int i = 0; i < SKIP; i++)
+    {
+        infile.ignore(INT_MAX, '\n');            // Read in and discard characters until delimiter is reached
+    }
+
+    while (std::getline(infile, line))
+    {
+        outfile << line << "\n";
+    }
+
+    outfile.close();
+    infile.close();
 }
 
 int PortScanner::init(int portNumber)
@@ -52,6 +70,7 @@ int PortScanner::init(int portNumber)
     outfile << "Success: " << iResult << endl;
 }
 
+// Multithreading for sending and receiving
 int PortScanner::scan(int portNumber, string message)
 {
     // Point to result addrinfo struct
@@ -89,6 +108,17 @@ int PortScanner::scan(int portNumber, string message)
     }
     outfile << "Success!" << endl;
 
+    thread send_thread([this, portNumber, message] { sendData(portNumber, message); });
+    thread recv_thread([this] { recvData(); });
+
+    send_thread.join();
+    recv_thread.join();
+
+    return 0;
+}
+
+int PortScanner::sendData(int portNumber, string message)
+{
     // Sending data
     // Truncate message length to DEFAULT_BUFLEN
     if (message.length() > DEFAULT_BUFLEN) {
@@ -104,7 +134,27 @@ int PortScanner::scan(int portNumber, string message)
         WSACleanup();
         return 1;
     }
+}
 
-
+int PortScanner::recvData()
+{
+    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();         // Start time
+    do {
+        // Receive data then return
+        iResult = recv(connectSocket, recvbuf, recvbuflen, 0);
+        if (iResult > 0) {
+            for (int i = 0; i < iResult; i++) {
+                outfile << recvbuf[i];
+            }
+            std::cout << "\n";
+            return 0;
+        }
+        else if (iResult == 0) {
+            outfile << "Connection Closed!" << endl;
+        }
+        else {
+            outfile << "recv failed: " << WSAGetLastError() << endl;
+        }
+    } while (iResult > 0 && std::chrono::steady_clock::now() - start <= std::chrono::seconds(5));
     return 0;
 }

@@ -10,5 +10,5 @@ int main(int argc, char *argv[])
 
     widget.show();
 
-    return app.exec();
+    return app.exec();              // Enters main event loop for GUI
 }

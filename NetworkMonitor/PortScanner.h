@@ -20,6 +20,8 @@ public:
 
 	int init(int portNumber);
 	int scan(int portNumber, string message);
+	int sendData(int portNumber, string message);
+	int recvData();
 
 
 	// Implement single thread first
@@ -28,6 +30,8 @@ public:
 
 private:
 	ofstream outfile;
+	ifstream infile;
+	string line;
 
 	thread send_thread;
 	vector<PortData> data;
