@@ -15,13 +15,14 @@ using namespace std;
 
 class PortScanner {
 public:
-	PortScanner(const char* ip);
+	PortScanner(string ip);
 	~PortScanner();
 
 	int init(int portNumber);
 	int scan(int portNumber, string message);
-	int sendData(int portNumber, string message);
-	int recvData();
+	int sendData(string message);
+	void recvData();
+	int close();
 
 
 	// Implement single thread first
@@ -41,7 +42,7 @@ private:
 	struct addrinfo* ptr = NULL;
 	struct addrinfo hints;
 
-	const char* ip;
+	string ip;
 	const char* sendbuf;
 
 	char recvbuf[DEFAULT_BUFLEN];

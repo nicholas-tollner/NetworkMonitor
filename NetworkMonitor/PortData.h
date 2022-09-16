@@ -10,7 +10,6 @@ using namespace std;
 class PortData {
 public:
 	PortData(const int portNumber, vector<string> data);
-	~PortData();
 
 private:
 	int portNumber;

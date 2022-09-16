@@ -2,13 +2,8 @@
 
 #define SKIP 3
 
-/* Need to create multiple threads
-	Each thread must attempt to connect to a port number
-	
-*/
-
 // Constructor
-PortScanner::PortScanner(const char* ip)
+PortScanner::PortScanner(string ip)
 {
     this->ip = ip;
 
@@ -17,7 +12,11 @@ PortScanner::PortScanner(const char* ip)
     outfile << " === Application Started === " << endl;
 }
 
-// Destructor
+/**
+ * Destructor for PortScanner class.
+ * 
+ * Handles movement of debug.txt info to output.txt for subsequent scans.
+ */
 PortScanner::~PortScanner()
 {
     outfile.close();
@@ -39,6 +38,12 @@ PortScanner::~PortScanner()
     infile.close();
 }
 
+/**
+ * Handles set up of address info struct.
+ * 
+ * \param portNumber The port number to connect with.
+ * \return int, 1 if error occurred, 0 otherwise
+ */
 int PortScanner::init(int portNumber)
 {
     outfile << " WSAStartup ... ";
@@ -61,16 +66,23 @@ int PortScanner::init(int portNumber)
 
     outfile << "Getaddrinfo ... ";
     // Request IP address of server from command line
-    iResult = getaddrinfo(ip, std::to_string(portNumber).c_str(), &hints, &result);
+    iResult = getaddrinfo(ip.c_str(), std::to_string(portNumber).c_str(), &hints, &result);
     if (iResult != 0) {
         outfile << "Fail: " << iResult << endl;
         WSACleanup();
         return 1;
     }
     outfile << "Success: " << iResult << endl;
+    return 0;
 }
 
-// Multithreading for sending and receiving
+/**
+ * Sets up socket, handles sending & receiving of data using multithreading.
+ * Socket timeout for receiving is set to 100ms.
+ * \param portNumber
+ * \param message
+ * \return 
+ */
 int PortScanner::scan(int portNumber, string message)
 {
     // Point to result addrinfo struct
@@ -78,6 +90,10 @@ int PortScanner::scan(int portNumber, string message)
 
     // Setup socket to use for connection to server
     connectSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+
+    // Set connectSocket to timeout after 100 milliseconds
+    DWORD timeout = 100;           // Wait for data
+    setsockopt(connectSocket, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
 
     outfile << "Pinging " << ip << ":" << portNumber << " ... ";
 
@@ -108,7 +124,7 @@ int PortScanner::scan(int portNumber, string message)
     }
     outfile << "Success!" << endl;
 
-    thread send_thread([this, portNumber, message] { sendData(portNumber, message); });
+    thread send_thread([this, portNumber, message] { sendData(message); });
     thread recv_thread([this] { recvData(); });
 
     send_thread.join();
@@ -117,7 +133,13 @@ int PortScanner::scan(int portNumber, string message)
     return 0;
 }
 
-int PortScanner::sendData(int portNumber, string message)
+/**
+ * Handles sending of data on predefined socket connection.
+ * 
+ * \param message The data to be sent on the socket connection.
+ * \return int, 1 if error occurred, 0 otherwise
+ */
+int PortScanner::sendData(string message)
 {
     // Sending data
     // Truncate message length to DEFAULT_BUFLEN
@@ -134,11 +156,15 @@ int PortScanner::sendData(int portNumber, string message)
         WSACleanup();
         return 1;
     }
+
+    return 0;
 }
 
-int PortScanner::recvData()
+/**
+ * Handles receiving of data on predefined socket connection.
+ */
+void PortScanner::recvData()
 {
-    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();         // Start time
     do {
         // Receive data then return
         iResult = recv(connectSocket, recvbuf, recvbuflen, 0);
@@ -147,14 +173,35 @@ int PortScanner::recvData()
                 outfile << recvbuf[i];
             }
             std::cout << "\n";
-            return 0;
+            return;
         }
         else if (iResult == 0) {
             outfile << "Connection Closed!" << endl;
         }
         else {
-            outfile << "recv failed: " << WSAGetLastError() << endl;
+            outfile << "Recv Failed: " << WSAGetLastError() << endl;
         }
-    } while (iResult > 0 && std::chrono::steady_clock::now() - start <= std::chrono::seconds(5));
-    return 0;
+    } while (iResult > 0);
+    return;
+}
+
+/**
+ * Handles closing of socket connection for both sending and receiving.
+ * 
+ * \return int, 1 if error occured, 0 otherwise
+ */
+int PortScanner::close()
+{
+    // Shutdown the connection for sending and receiving
+    iResult = shutdown(connectSocket, SD_BOTH);
+    if (iResult == SOCKET_ERROR) {
+        outfile << "Shutdown Failed: " << WSAGetLastError() << endl;
+        closesocket(connectSocket);
+        WSACleanup();
+        return 1;
+    }
+
+    // Cleanup resources
+    closesocket(connectSocket);
+    WSACleanup();
 }
